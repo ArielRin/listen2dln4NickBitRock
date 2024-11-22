@@ -46,7 +46,7 @@ This listener enables developers to:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/multichain-bitrock-listener.git
+   git clone https://github.com/ArielRin/listen2dln4NickBitRock.git
    cd multichain-bitrock-listener
    ```
 
