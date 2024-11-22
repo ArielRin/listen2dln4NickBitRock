@@ -1,6 +1,6 @@
-
 const { ethers } = require("ethers");
 
+// Replace with your actual RPC URL and contract address
 const DESTINATION_RPC_URL = "https://connect.bit-rock.io";
 const DESTINATION_CONTRACT_ADDRESS = "0xe7351fd770a37282b91d153ee690b63579d6dd7f";
 
@@ -40,34 +40,52 @@ const DESTINATION_CONTRACT_ABI = [
 ];
 
 const provider = new ethers.JsonRpcProvider(DESTINATION_RPC_URL);
-
 const destinationContract = new ethers.Contract(
   DESTINATION_CONTRACT_ADDRESS,
   DESTINATION_CONTRACT_ABI,
   provider
 );
 
-destinationContract.on("FulfilledOrder", (order, orderId, sender, unlockAuthority, event) => {
+let transactionCount = 0;
+
+// Function to log event details
+function logEvent(eventData) {
   console.clear();
-  console.log("🚀 Incoming Transaction Detected!");
-  console.log("--------------------------------");
+  console.log(`🚀 Multichain Bitrock Listener`);
+  console.log(`Incoming Transactions: ${transactionCount}`);
+  console.log("=".repeat(50));
+  console.log(`Transaction Hash: ${eventData.transactionHash}`);
+  console.log(`Order ID: ${eventData.orderId}`);
+  console.log(`Source Chain ID: ${eventData.sourceChainId}`);
+  console.log(`Give Amount: ${eventData.giveAmount}`);
+  console.log(`Take Amount: ${eventData.takeAmount}`);
+  console.log(`Receiver Address: ${eventData.receiverDst}`);
+  console.log("=".repeat(50));
+}
 
-  const sourceChainId = order.giveChainId;
-  const destinationTokenAddress = ethers.utils.toUtf8String(order.takeTokenAddress);
-  const sourceSender = ethers.utils.toUtf8String(order.makerSrc);
+// Listen for live events
+destinationContract.on("FulfilledOrder", (order, orderId, sender, unlockAuthority, event) => {
+  transactionCount += 1;
 
-  console.log("Order ID:", orderId);
-  console.log("Source Chain ID:", sourceChainId);
-  console.log("Source Sender Address:", sourceSender);
-  console.log("Destination Token Address:", destinationTokenAddress);
-  console.log("Give Amount (Source Chain):", ethers.formatEther(order.giveAmount));
-  console.log("Take Amount (Destination Chain):", ethers.formatEther(order.takeAmount));
-  console.log("Destination Receiver:", ethers.utils.toUtf8String(order.receiverDst));
-  console.log("--------------------------------\n");
+  const safeHexToUtf8 = (bytesValue) => {
+    if (!bytesValue || bytesValue === "0x") return "N/A";
+    try {
+      return ethers.utils.toUtf8String(bytesValue);
+    } catch {
+      return `Invalid UTF-8: ${bytesValue}`;
+    }
+  };
+
+  const eventData = {
+    transactionHash: event.transactionHash,
+    orderId: orderId,
+    sourceChainId: order.giveChainId.toString(),
+    giveAmount: ethers.formatEther(order.giveAmount),
+    takeAmount: ethers.formatEther(order.takeAmount),
+    receiverDst: safeHexToUtf8(order.receiverDst)
+  };
+
+  logEvent(eventData);
 });
 
-provider.on("error", (error) => {
-  console.error("Error in provider:", error);
-});
-
-console.log("Listening for incoming transactions...");
+console.log("Listening for live events...");
