@@ -1,10 +1,12 @@
 # Multichain Bitrock Listener
 
-![Multichain Bitrock Listener](https://raw.githubusercontent.com/ArielRin/listen2dln4NickBitRock/refs/heads/master/listen.png)
 
 ## Introduction
 
 The **Multichain Bitrock Listener** is a Node.js script designed to fetch and monitor blockchain events for the Bitrock destination contract and provide detailed transaction and order information. It integrates with the deBridge API to retrieve source and destination token details, chain IDs, and amounts, enhancing its utility for decentralized apps (dApps), Telegram bots, Discord bots, or web-based dashboards.
+
+
+![Multichain Bitrock Listener](https://raw.githubusercontent.com/ArielRin/listen2dln4NickBitRock/refs/heads/master/listen.png)
 
 This listener enables developers to:
 - Monitor cross-chain transactions efficiently.
