@@ -1,8 +1,10 @@
 const { ethers } = require("ethers");
+const axios = require("axios");
 
-// Replace with your actual RPC URL and contract address
+// Configurations
 const DESTINATION_RPC_URL = "https://connect.bit-rock.io";
 const DESTINATION_CONTRACT_ADDRESS = "0xe7351fd770a37282b91d153ee690b63579d6dd7f";
+const DLN_API_BASE_URL = "https://dln.debridge.finance/v1.0";
 
 const DESTINATION_CONTRACT_ABI = [
   {
@@ -46,46 +48,52 @@ const destinationContract = new ethers.Contract(
   provider
 );
 
+// Function to fetch order details from DLN API
+async function fetchOrderDetails(orderId) {
+  try {
+    const response = await axios.get(`${DLN_API_BASE_URL}/dln/order/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching details for Order ID ${orderId}:`, error.response?.data || error.message);
+    return null;
+  }
+}
+
+// Event listener
 let transactionCount = 0;
 
-// Function to log event details
-function logEvent(eventData) {
+destinationContract.on("FulfilledOrder", async (order, orderId, sender, unlockAuthority, event) => {
+  transactionCount++;
+
+  const transactionHash = event.transactionHash || "N/A";
+
+  // Fetch additional order details from DLN API
+  const orderDetails = await fetchOrderDetails(orderId);
+
   console.clear();
   console.log(`🚀 Multichain Bitrock Listener`);
   console.log(`Incoming Transactions: ${transactionCount}`);
   console.log("=".repeat(50));
-  console.log(`Transaction Hash: ${eventData.transactionHash}`);
-  console.log(`Order ID: ${eventData.orderId}`);
-  console.log(`Source Chain ID: ${eventData.sourceChainId}`);
-  console.log(`Give Amount: ${eventData.giveAmount}`);
-  console.log(`Take Amount: ${eventData.takeAmount}`);
-  console.log(`Receiver Address: ${eventData.receiverDst}`);
+  console.log(`Transaction Hash: ${transactionHash}`);
+  console.log(`Order ID: ${orderId}`);
+  console.log(`Source Chain ID: ${order.giveChainId.toString()}`);
+  console.log(`Destination Chain ID: ${order.takeChainId.toString()}`);
+  console.log(`Give Amount: ${ethers.formatEther(order.giveAmount)}`);
+  console.log(`Take Amount: ${ethers.formatEther(order.takeAmount)}`);
+  console.log(`Receiver Address: ${ethers.utils.toUtf8String(order.receiverDst)}`);
+  console.log("Links:");
+  console.log(`- Bitrock Transaction: https://bitrockscan.io/tx/${transactionHash}`);
+  console.log(`- deBridge Order Details: https://app.debridge.finance/order?orderId=${orderId}`);
   console.log("=".repeat(50));
-}
 
-// Listen for live events
-destinationContract.on("FulfilledOrder", (order, orderId, sender, unlockAuthority, event) => {
-  transactionCount += 1;
-
-  const safeHexToUtf8 = (bytesValue) => {
-    if (!bytesValue || bytesValue === "0x") return "N/A";
-    try {
-      return ethers.utils.toUtf8String(bytesValue);
-    } catch {
-      return `Invalid UTF-8: ${bytesValue}`;
-    }
-  };
-
-  const eventData = {
-    transactionHash: event.transactionHash,
-    orderId: orderId,
-    sourceChainId: order.giveChainId.toString(),
-    giveAmount: ethers.formatEther(order.giveAmount),
-    takeAmount: ethers.formatEther(order.takeAmount),
-    receiverDst: safeHexToUtf8(order.receiverDst)
-  };
-
-  logEvent(eventData);
+  if (orderDetails) {
+    console.log("Detailed Order Information:");
+    console.log(`- Source Token: ${orderDetails.orderStruct.giveOffer.tokenAddress}`);
+    console.log(`- Destination Token: ${orderDetails.orderStruct.takeOffer.tokenAddress}`);
+    console.log(`- Source Amount: ${ethers.formatUnits(orderDetails.orderStruct.giveOffer.amount, 18)}`);
+    console.log(`- Destination Amount: ${ethers.formatUnits(orderDetails.orderStruct.takeOffer.amount, 18)}`);
+    console.log("=".repeat(50));
+  }
 });
 
 console.log("Listening for live events...");
